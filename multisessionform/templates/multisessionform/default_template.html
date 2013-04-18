@@ -1,0 +1,76 @@
+{% block page-title %}{% block title %}Multisession Form{% if model %} - {{ model.name }}{% endif %} {% endblock %}{% endblock %}
+{% block content %}
+<div class="multipage-form-navigator">
+	{% for hr in form.sections %}
+		{% if not hr.name == form.my_current_field  %}
+			{% if hr.value %}
+				<a href="{% url 'saved_study_application_page' model.pk hr.name|lower%}" class="{% if hr.value %}completed-field{% endif %}">{{hr.display}}</a>
+			{% else %}
+				<span>{{hr.display}}</span>
+			{% endif %}
+		{% else %}
+			<span class="current-field {% if hr.value %}completed-field{% endif %}">{{hr.display}}</span>
+		{% endif %}
+	{% endfor %}
+</div> 
+<form action="." method="post" id="study-form">{% csrf_token %}
+<table class="form-table fullwidth">
+{{form.as_table|safe}}
+</table>
+<input type="button" value="Save" onclick="submitForm('.');" />
+{% if form.get_next_field_name %}
+	<input type="button" value="Save and Continue" onclick="submitForm('.?next={{form.get_next_field_name|lower}}');" />
+{% endif %}
+{% if complete %}
+	<input id="review-app-button" type="button" value="Review and Submit" onclick="review();" />
+	<script>
+		function review(){
+			var dialog = $('<div>').attr({"title":"Review Study Application - {{model.name}}"}).addClass('fullDialog');
+			dialog.dialog({
+				autoOpen: false,
+				modal: true,
+				width: "auto",
+				height: "auto",
+				position: {my: "center top", at: "center top", of: "#page"},
+				buttons: {
+					"Submit Application for Review": function(){
+						window.location="{% url 'study_submit' model.pk %}";
+					},
+					"Continue Editing Application": function(){
+						dialog.remove();
+					}
+				}
+			});
+			$.ajax({
+				url: "{% url 'study_review' model.pk %}",
+				type: 'post',
+				dataType: 'html',
+				success: function(data){
+					dialog.append(data);
+				},
+				error: function(err){
+					dialog.append(err);
+				},
+				complete: function(){
+					dialog.dialog({width:"auto"});
+					dialog.dialog("open");
+				}
+			});
+		}
+	</script>
+{% endif %}
+<input id="clear-changes-button" type="button" value="Clear Changes" onclick="window.location = location;" disabled />
+<script>
+$("input[type=text], textarea").on('keyup', function(){
+	$('#review-app-button').attr('disabled',true);
+	$('#clear-changes-button').attr('disabled',false);
+	$("input[type=text], textarea").off('keyup');
+});
+
+function submitForm(actionLocation){
+	$("#study-form").attr("action", actionLocation);
+	$("#study-form").submit();
+}
+</script>
+</form>
+{% endblock %}
