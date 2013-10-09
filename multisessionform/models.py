@@ -1,17 +1,8 @@
 from django.forms.models import modelform_factory
-from forms import MSFForm
-from django.db import models
+from forms import MSFForm, FullForm
 
-class MultiSessionFormMixin(models.Model):
-    FORM_INCOMPLETE = "started"
-    FORM_COMPLETE = "complete"
-    FORM_STATUS_CHOICES = (
-            (FORM_INCOMPLETE, "Incomplete"),
-            (FORM_COMPLETE, "Complete")
-    )
-        
-    form_status = models.CharField(max_length = 8, choices = FORM_STATUS_CHOICES)
-        
+class MultiSessionFormMixin(object):
+    
     def is_complete(self):
         return len(self._meta.fields) == len(self.complete_fields(False))
     
@@ -40,6 +31,14 @@ class MultiSessionFormMixin(models.Model):
       
     def incomplete_fields(self):
         return [field for field in self._meta.fields if field not in self.complete_fields(False)]
+
+    def get_form_fields(self):
+        fields = []
+        required_fields = self.get_required_fields()
+        for field in self._meta.fields:
+            if field not in required_fields:
+                fields.append(field)
+        return fields
     
     @classmethod
     def get_required_fields(cls):
@@ -53,5 +52,12 @@ class MultiSessionFormMixin(models.Model):
     def multisessionform_factory(cls):
         try:
             return modelform_factory(cls, form=MSFForm, exclude=[f.name for f in cls.get_required_fields()])
+        except Exception, e:
+            print e
+            
+    @classmethod
+    def fullform_factory(cls):
+        try:
+            return modelform_factory(cls, form=FullForm, exclude=[f.name for f in cls.get_required_fields()])
         except Exception, e:
             print e

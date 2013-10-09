@@ -1,14 +1,18 @@
 # Create your views here.
-from django.views.generic.base import View
+from django.views.generic.base import TemplateView
 from django.core.exceptions import ImproperlyConfigured
 from django.http import HttpResponseRedirect
 from django.shortcuts import render_to_response
 from django.template.context import RequestContext
 
-class MultiSessionFormView(View):
+class MultiSessionFormView(TemplateView):
     form_class = None
     template_name = None
     multisessionform = None
+    
+    def get_context_data(self, **kwargs):
+        context = super(MultiSessionFormView, self).get_context_data(**kwargs)
+        return context
     
     def dispatch(self, request, *args, **kwargs):
         if not self.form_class:
@@ -36,11 +40,11 @@ class MultiSessionFormView(View):
     def get(self, request, *args, **kwargs):
         if self.pk:
             try:
-                model_object = self.form_class.objects.get(pk = self.pk, user = request.user, form_status=self.form_class.FORM_INCOMPLETE) 
+                model_object = self.form_class.objects.get(pk = self.pk, user = request.user) 
                 if self.form_field:
                     form = self.multisessionform(self.form_field, instance = model_object)
                 else:
-                    return HttpResponseRedirect(model_object.get_absolute_url(), args=(self.pk, model_object.get_first_incomplete_field()))
+                    return HttpResponseRedirect(model_object.get_absolute_url())
             except:
                 model_object = self.form_class()
                 return HttpResponseRedirect(model_object.get_absolute_url()) 
@@ -51,19 +55,18 @@ class MultiSessionFormView(View):
             complete = model_object.is_complete()
         except:
             complete = None
-        return render_to_response(self.template_name, 
-                                  {'form':form, "model":model_object, "complete":complete}, 
-                                  context_instance = RequestContext(request)
-                                 )
+        
+        
+        return self.render_to_response(self.get_context_data(user = request.user, form = form, model = model_object, complete = complete))
         
     def post(self, request, *args, **kwargs):
         if self.pk:
             try:
-                model_object = self.form_class.objects.get(pk = self.pk, user = request.user, form_status=self.form_class.FORM_INCOMPLETE) 
+                model_object = self.form_class.objects.get(pk = self.pk, user = request.user) 
                 form = self.multisessionform(self.form_field, request.POST, instance = model_object)
                 if form.is_valid():
                     msf_form = form.save()
-                    return HttpResponseRedirect(model_object.get_absolute_url(),args = (self.pk, request.GET.get('next',self.form_field)))
+                    return HttpResponseRedirect(model_object.get_absolute_url(request.GET.get('next',self.form_field)))
             except:
                 model_object = self.form_class()
                 return HttpResponseRedirect(model_object.get_absolute_url()) 
@@ -75,13 +78,10 @@ class MultiSessionFormView(View):
                 msf_form.user = request.user
                 msf_form.save()
                 
-                return HttpResponseRedirect(model_object.get_absolute_url(), args = (msf_form.pk,form.get_first_incomplete_field()))
+                return HttpResponseRedirect(msf_form.get_absolute_url())
 
         try:
             complete = model_object.is_complete()
         except:
             complete = None
-        return render_to_response(self.template_name, 
-                                  {'form':form, "model":model_object, "complete":complete}, 
-                                  context_instance = RequestContext(request)
-                                 )
+        return self.render_to_response(self.get_context_data(user = request.user, form = form, model = model_object, complete = complete))

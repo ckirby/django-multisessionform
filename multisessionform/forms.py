@@ -35,3 +35,7 @@ class MSFForm(ModelForm):
                     return self.sections[self.sections.index(hf)+1]['name']
         except:
             return None
+        
+class FullForm(ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(FullForm, self).__init__(*args, **kwargs)
