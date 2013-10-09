@@ -5,12 +5,6 @@ Allows interaction with a form over multiple sessions, similar to many job and s
 
 ::
 
-    $ pip install django-multi-session-form
-	
-or download from github (http://github.com/ckirby/django-multi-session-form)
-
-::
-
     $ python setup.py install
 	
 The project provides a mixin that will add the following methods to a model:
